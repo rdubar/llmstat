@@ -152,14 +152,13 @@ func main() {
 		if label == "" {
 			label = "today"
 		}
-		out := struct {
-			Period    string             `json:"period"`
-			Since     time.Time          `json:"since"`
-			Summaries []provider.Summary `json:"summaries"`
-		}{label, since, summaries}
+		for i := range summaries {
+			summaries[i].Period = label
+			summaries[i].Since = since
+		}
 		enc := json.NewEncoder(os.Stdout)
 		enc.SetIndent("", "  ")
-		_ = enc.Encode(out)
+		_ = enc.Encode(summaries)
 		return
 	}
 

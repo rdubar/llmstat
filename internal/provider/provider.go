@@ -5,6 +5,8 @@ import "time"
 // Summary is the standard result returned by every provider.
 type Summary struct {
 	Name        string
+	Period      string    `json:",omitempty"` // e.g. "today", "since 12 Apr", "April 2026"
+	Since       time.Time `json:",omitempty"` // start of the reporting window
 	TokensToday int64
 	CostUSD     float64
 	RatePer5Min int64   // tokens in the last 5 minutes
