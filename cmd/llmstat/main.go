@@ -148,9 +148,18 @@ func main() {
 	}
 
 	if *jsonOut {
+		label := periodLabel
+		if label == "" {
+			label = "today"
+		}
+		out := struct {
+			Period    string             `json:"period"`
+			Since     time.Time          `json:"since"`
+			Summaries []provider.Summary `json:"summaries"`
+		}{label, since, summaries}
 		enc := json.NewEncoder(os.Stdout)
 		enc.SetIndent("", "  ")
-		_ = enc.Encode(summaries)
+		_ = enc.Encode(out)
 		return
 	}
 
