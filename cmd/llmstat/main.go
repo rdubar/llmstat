@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"runtime/debug"
 	"time"
 
 	"github.com/rdubar/llmstat/internal/config"
@@ -28,6 +29,8 @@ func main() {
 	var (
 		doSetup   = flag.Bool("setup", false, "Run interactive setup wizard")
 		doUpgrade bool
+		doVersion bool
+		doCredits bool
 		weekly    = flag.Bool("w", false, "Show this week's usage instead of today")
 		monthly   = flag.Bool("m", false, "Show this month's usage instead of today")
 		jsonOut   = flag.Bool("json", false, "Output JSON")
@@ -35,6 +38,9 @@ func main() {
 	)
 	flag.BoolVar(&doUpgrade, "upgrade", false, "Upgrade llmstat to the latest version")
 	flag.BoolVar(&doUpgrade, "u", false, "Alias for --upgrade")
+	flag.BoolVar(&doVersion, "version", false, "Show version and build info")
+	flag.BoolVar(&doVersion, "v", false, "Alias for --version")
+	flag.BoolVar(&doCredits, "credits", false, "Show credits")
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: llmstat [flags] [provider]\n\n")
 		fmt.Fprintf(os.Stderr, "  provider    Optional: show detail for one provider (e.g. llmstat claude)\n\n")
@@ -42,6 +48,20 @@ func main() {
 		flag.PrintDefaults()
 	}
 	flag.Parse()
+
+	if doVersion {
+		fmt.Println(versionInfo())
+		return
+	}
+
+	if doCredits {
+		fmt.Println("llmstat — https://github.com/rdubar/llmstat")
+		fmt.Println("Built and maintained by Roger Dubar (https://github.com/rdubar)")
+		fmt.Println("With thanks to Alphapet Ventures (https://alpha.pet)")
+		fmt.Println("Development assistance: Claude (Anthropic), Codex (OpenAI)")
+		fmt.Println("MIT License")
+		return
+	}
 
 	if doUpgrade {
 		cmd := exec.Command("go", "install", "github.com/rdubar/llmstat/cmd/llmstat@latest")
@@ -131,6 +151,24 @@ func main() {
 
 	display.PrintWarnings(warnings)
 	display.Render(summaries)
+}
+
+func versionInfo() string {
+	version := "(development)"
+	built := ""
+
+	info, ok := debug.ReadBuildInfo()
+	if ok {
+		if info.Main.Version != "" && info.Main.Version != "(devel)" {
+			version = info.Main.Version
+		}
+		for _, s := range info.Settings {
+			if s.Key == "vcs.time" {
+				built = "  built " + s.Value
+			}
+		}
+	}
+	return "llmstat " + version + built
 }
 
 func tierFor(cfg config.Config, name string) string {

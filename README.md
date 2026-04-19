@@ -42,6 +42,8 @@ llmstat -m         # this month's usage
 llmstat claude     # single provider detail
 llmstat --json     # machine-readable JSON output
 llmstat -u         # upgrade to latest version
+llmstat -v         # version and build info
+llmstat --credits  # credits and provenance
 ```
 
 ## Upgrade
