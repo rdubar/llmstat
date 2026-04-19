@@ -1,14 +1,15 @@
-// Package cursor reads Cursor's state.vscdb SQLite database.
-// Schema is reverse-engineered and marked experimental.
-// TODO milestone 8: implement full collection.
+// Package cursor reads Cursor's state.vscdb for tier info.
+// Token usage is cloud-only; we show membership tier and detect installation.
 package cursor
 
 import (
+	"database/sql"
 	"os"
 	"runtime"
-	"time"
 
 	"github.com/rdubar/llmstat/internal/provider"
+	_ "modernc.org/sqlite"
+	"time"
 )
 
 type Provider struct{}
@@ -21,11 +22,27 @@ func (Provider) Detect() bool {
 }
 
 func (Provider) Collect(cfg provider.ProviderConfig, since time.Time) (provider.Summary, error) {
+	tier := readTier()
+	extra := "no local usage data"
+	if tier != "" {
+		extra = tier + " · no local usage data"
+	}
 	return provider.Summary{
 		Name:     "cursor",
 		LimitPct: -1,
-		Extra:    "coming soon (experimental)",
+		Extra:    extra,
 	}, nil
+}
+
+func readTier() string {
+	db, err := sql.Open("sqlite", dbPath()+"?mode=ro")
+	if err != nil {
+		return ""
+	}
+	defer db.Close()
+	var tier string
+	_ = db.QueryRow(`SELECT value FROM ItemTable WHERE key='cursorAuth/stripeMembershipType'`).Scan(&tier)
+	return tier
 }
 
 func dbPath() string {
