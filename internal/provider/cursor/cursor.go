@@ -22,7 +22,10 @@ func (Provider) Detect() bool {
 }
 
 func (Provider) Collect(cfg provider.ProviderConfig, since time.Time) (provider.Summary, error) {
-	tier := readTier()
+	tier := cfg.Tier
+	if tier == "" {
+		tier = readTier()
+	}
 	extra := "no local usage data"
 	if tier != "" {
 		extra = tier + " · no local usage data"
