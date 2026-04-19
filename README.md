@@ -3,13 +3,15 @@
 Track your local AI tool usage in one line.
 
 ```
-claude  ████████░░  78% of 5hr window  │ 28.3M tok  $4.20  1.2M/5min
-codex   ░░░░░░░░░░                     │ 19.5M tok  4 sessions
+claude  ████████░░  78% of 5hr window  │ 42.0M tok  1.9M/5min
+codex   ░░░░░░░░░░                     │ 5.4M tok  3 sessions
+gemini  ░░░░░░░░░░                     │ 7.8k tok  1 sessions
+cursor  ░░░░░░░░░░                     │ enterprise · no local usage data
 ```
 
 Reads local data files directly — no API calls, no accounts, works offline.
 
-**Supported tools:** Claude (Anthropic), Codex (OpenAI), Gemini CLI *(coming soon)*, Cursor *(coming soon)*
+**Supported tools:** Claude (Anthropic), Codex (OpenAI), Gemini CLI, Cursor
 
 ---
 
@@ -58,8 +60,8 @@ llmstat --upgrade   # or: llmstat -u
 |--------|-------------|
 | Claude | `~/.claude/projects/**/*.jsonl` |
 | Codex  | `~/.codex/state_5.sqlite` |
-| Gemini | `~/.gemini/telemetry.log` *(coming soon)* |
-| Cursor | `~/Library/Application Support/Cursor/User/globalStorage/state.vscdb` *(coming soon)* |
+| Gemini | `~/.gemini/tmp/*/chats/session-*.json` — token counts per response |
+| Cursor | `~/Library/Application Support/Cursor/User/globalStorage/state.vscdb` — tier only (usage is cloud-side) |
 
 Each provider is auto-detected. If the data file exists, it appears in output.
 
