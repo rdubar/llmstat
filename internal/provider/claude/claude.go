@@ -104,6 +104,7 @@ type jsonlRecord struct {
 	Timestamp string  `json:"timestamp"`
 	CostUSD   float64 `json:"costUSD"`
 	Message   struct {
+		ID    string `json:"id"`
 		Usage *struct {
 			InputTokens              int64 `json:"input_tokens"`
 			OutputTokens             int64 `json:"output_tokens"`
@@ -113,14 +114,6 @@ type jsonlRecord struct {
 	} `json:"message"`
 }
 
-type usageKey struct {
-	tsSec int64
-	in    int64
-	out   int64
-	read  int64
-	write int64
-}
-
 func parseJSONL(path string, since, rateStart time.Time) (tokens, rateTokens int64, cost float64, err error) {
 	f, err := os.Open(path)
 	if err != nil {
@@ -128,9 +121,10 @@ func parseJSONL(path string, since, rateStart time.Time) (tokens, rateTokens int
 	}
 	defer f.Close()
 
-	// Deduplicate repeated assistant events with identical usage payloads
-	// (Claude logs emit the same usage object multiple times within milliseconds).
-	seen := make(map[usageKey]bool)
+	// Claude logs emit multiple records per API call (e.g. thinking block then
+	// text block), each carrying the full usage payload. Deduplicate by message
+	// ID so each API call is counted once.
+	seenIDs := make(map[string]bool)
 
 	dec := json.NewDecoder(f)
 	for dec.More() {
@@ -140,6 +134,12 @@ func parseJSONL(path string, since, rateStart time.Time) (tokens, rateTokens int
 		}
 		if rec.Message.Usage == nil {
 			continue
+		}
+		if id := rec.Message.ID; id != "" {
+			if seenIDs[id] {
+				continue
+			}
+			seenIDs[id] = true
 		}
 		ts, err := time.Parse(time.RFC3339, rec.Timestamp)
 		if err != nil {
@@ -152,11 +152,6 @@ func parseJSONL(path string, since, rateStart time.Time) (tokens, rateTokens int
 			continue
 		}
 		u := rec.Message.Usage
-		key := usageKey{ts.Unix(), u.InputTokens, u.OutputTokens, u.CacheReadInputTokens, u.CacheCreationInputTokens}
-		if seen[key] {
-			continue
-		}
-		seen[key] = true
 		t := u.InputTokens + u.OutputTokens + u.CacheReadInputTokens + u.CacheCreationInputTokens
 		tokens += t
 		cost += rec.CostUSD
