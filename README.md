@@ -38,6 +38,7 @@ llmstat --setup
 ```sh
 llmstat            # today's usage for all detected tools
 llmstat -w         # this week's usage
+llmstat -m         # this month's usage
 llmstat claude     # single provider detail
 llmstat --json     # machine-readable JSON output
 ```
@@ -72,6 +73,16 @@ tier = "max"
 [codex]
 tier = "plus"
 ```
+
+## Contributing
+
+Contributions welcome — bug reports, tier data corrections, and new provider implementations especially. Please open an issue before starting significant work so we can align on approach.
+
+## Credits
+
+Built and maintained by [Roger Dubar](https://github.com/rdubar), with development assistance from Claude (Anthropic) and Codex (OpenAI).
+
+With thanks to [Alphapet Ventures](https://alpha.pet).
 
 ## License
 
