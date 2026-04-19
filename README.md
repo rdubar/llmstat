@@ -74,13 +74,10 @@ Tier limits (tokens per 5-hour window) are read from a bundled `tiers.toml` and 
 
 llmstat reads whatever local telemetry each tool happens to write. That data wasn't designed for accounting, so there are real accuracy gaps:
 
-**Claude** — The JSONL logs contain repeated assistant events with identical usage payloads
-milliseconds apart (likely streaming artifacts). llmstat deduplicates by exact
-`(timestamp, token counts)` within each file, which reduces inflated totals significantly,
-but the deduplication heuristic may still miss some cases or over-deduplicate in unusual
-situations. Treat Claude token counts as directionally correct, not precise.
-`costUSD` fields are zero in local logs, so the daily budget feature shows no spend even
-when tokens are high.
+**Claude** — The JSONL logs emit multiple records per API call (one per content block —
+e.g. a thinking block followed by the text response), each carrying the full usage payload.
+llmstat deduplicates by `message.id` so each API call is counted once. `costUSD` fields
+are zero in local logs, so the daily budget feature shows no spend even when tokens are high.
 
 **Codex** — `~/.codex/state_5.sqlite` stores a cumulative `tokens_used` total per thread,
 not per-message events. llmstat can only count threads that were *created* within the
@@ -99,6 +96,29 @@ tier from the local state database. Actual token usage is cloud-side only.
 
 **General** — "Today" is computed in your local timezone. Weekly (`-w`) and monthly (`-m`)
 windows are also local-time anchored.
+
+**Multi-machine** — llmstat reads local files only. If you use the same tool on multiple
+machines, each machine reports its own usage independently. There is no cross-machine
+aggregation; totals are per-device, not per-account.
+
+## Future directions
+
+The multi-machine gap is the most significant limitation of the local-file approach. The
+natural fix is pulling usage directly from provider APIs, which would give accurate
+per-account totals regardless of how many machines you use. Here's what's feasible:
+
+| Provider | API availability | Notes |
+|----------|-----------------|-------|
+| **OpenAI (Codex)** | Yes — [`GET /v1/usage`](https://platform.openai.com/docs/api-reference) | Daily token counts by model; requires an API key with usage read scope |
+| **Anthropic (Claude)** | Not yet public | Usage visible in the console but no programmatic endpoint currently documented |
+| **Gemini** | Partial — Vertex AI billing API exists | Only for enterprise/Vertex users; Gemini CLI free tier has no usage API |
+| **Cursor** | No | Usage is cloud-side with no public API |
+
+OpenAI is the most actionable near-term addition. A future `[claude] api_key = "..."` config
+option could enable API-backed counts alongside (or instead of) local log parsing, with
+local files as the offline fallback.
+
+Contributions to add API-backed providers are welcome — see [Contributing](#contributing).
 
 ## Config
 
