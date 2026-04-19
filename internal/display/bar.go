@@ -149,6 +149,11 @@ func fmtTokens(n int64) string {
 	}
 }
 
+// PrintPeriod prints the reporting period header.
+func PrintPeriod(label string) {
+	fmt.Println(wrap(dim, label))
+}
+
 // PrintWarnings prints stale-tier warnings to stderr.
 func PrintWarnings(warnings []string) {
 	for _, w := range warnings {

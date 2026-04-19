@@ -99,12 +99,16 @@ func main() {
 	// Determine time window
 	now := time.Now().UTC()
 	var since time.Time
+	var periodLabel string
 	switch {
 	case *monthly:
 		since = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
+		periodLabel = since.Format("January 2006")
 	case *weekly:
 		since = now.AddDate(0, 0, -7)
-	default:
+		periodLabel = "since " + since.Format("2 Jan")
+	}
+	if periodLabel == "" {
 		since = now.Truncate(24 * time.Hour)
 	}
 
@@ -151,6 +155,9 @@ func main() {
 	}
 
 	display.PrintWarnings(warnings)
+	if periodLabel != "" {
+		display.PrintPeriod(periodLabel)
+	}
 	display.Render(summaries)
 }
 
