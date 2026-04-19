@@ -27,6 +27,7 @@ func main() {
 	var (
 		doSetup  = flag.Bool("setup", false, "Run interactive setup wizard")
 		weekly   = flag.Bool("w", false, "Show this week's usage instead of today")
+		monthly  = flag.Bool("m", false, "Show this month's usage instead of today")
 		jsonOut  = flag.Bool("json", false, "Output JSON")
 		cfgPath  = flag.String("config", config.DefaultPath(), "Config file path")
 	)
@@ -61,10 +62,13 @@ func main() {
 	// Determine time window
 	now := time.Now().UTC()
 	var since time.Time
-	if *weekly {
+	switch {
+	case *monthly:
+		since = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
+	case *weekly:
 		since = now.AddDate(0, 0, -7)
-	} else {
-		since = now.Truncate(24 * time.Hour) // start of today UTC
+	default:
+		since = now.Truncate(24 * time.Hour)
 	}
 
 	// Filter to a single provider if positional arg given
