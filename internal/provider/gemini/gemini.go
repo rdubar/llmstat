@@ -62,7 +62,7 @@ func (Provider) Collect(cfg provider.ProviderConfig, since time.Time) (provider.
 
 		sessionHasTokens := false
 		for _, msg := range session.Messages {
-			if msg.Tokens == nil {
+			if msg.Tokens == nil || msg.Timestamp.IsZero() || msg.Timestamp.Before(since) {
 				continue
 			}
 			tokensTotal += msg.Tokens.Total

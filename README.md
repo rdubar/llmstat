@@ -13,6 +13,9 @@ Reads local data files directly — no API calls, no accounts, works offline.
 
 **Supported tools:** Claude (Anthropic), Codex (OpenAI), Gemini CLI, Cursor
 
+> **Accuracy note:** llmstat is an activity pulse, not a precise billing meter. Token counts
+> are approximate — see [Known limitations](#known-limitations) below.
+
 ---
 
 ## Install
@@ -66,6 +69,36 @@ llmstat --upgrade   # or: llmstat -u
 Each provider is auto-detected. If the data file exists, it appears in output.
 
 Tier limits (tokens per 5-hour window) are read from a bundled `tiers.toml` and calibrated periodically against published limits. Run `llmstat --setup` to set your tier. The bar turns yellow at 60% and red at 85%.
+
+## Known limitations
+
+llmstat reads whatever local telemetry each tool happens to write. That data wasn't designed for accounting, so there are real accuracy gaps:
+
+**Claude** — The JSONL logs contain repeated assistant events with identical usage payloads
+milliseconds apart (likely streaming artifacts). llmstat deduplicates by exact
+`(timestamp, token counts)` within each file, which reduces inflated totals significantly,
+but the deduplication heuristic may still miss some cases or over-deduplicate in unusual
+situations. Treat Claude token counts as directionally correct, not precise.
+`costUSD` fields are zero in local logs, so the daily budget feature shows no spend even
+when tokens are high.
+
+**Codex** — `~/.codex/state_5.sqlite` stores a cumulative `tokens_used` total per thread,
+not per-message events. llmstat can only count threads that were *created* within the
+requested window — threads started before the window but still active are excluded.
+The 5-minute rate shown by some other tools is not reported here because it would just
+be the full lifetime token count of any recently-created thread, which is meaningless as
+a rate.
+
+**Gemini** — Token counts are per model response and are filtered by message timestamp,
+so they should be reasonably accurate for the selected window. The main caveat is that
+session files with no `timestamp` fields on messages are excluded from period filtering
+and may contribute zero or all tokens depending on file modification time.
+
+**Cursor** — No local usage data is available. llmstat can only detect your subscription
+tier from the local state database. Actual token usage is cloud-side only.
+
+**General** — "Today" is computed in your local timezone. Weekly (`-w`) and monthly (`-m`)
+windows are also local-time anchored.
 
 ## Config
 

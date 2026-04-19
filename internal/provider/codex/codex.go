@@ -33,7 +33,9 @@ func (Provider) Collect(cfg provider.ProviderConfig, since time.Time) (provider.
 	sinceUnix := since.Unix()
 	now := time.Now()
 
-	// Daily/period totals
+	// tokens_used is a cumulative per-thread total; we can only count threads
+	// that were *created* in the window — not incremental tokens added since then.
+	// This understates usage for long-lived threads but avoids inflating counts.
 	var tokensTotal int64
 	var sessions int
 	err = db.QueryRow(
@@ -44,15 +46,7 @@ func (Provider) Collect(cfg provider.ProviderConfig, since time.Time) (provider.
 		return provider.Summary{Name: "codex", Err: err}, err
 	}
 
-	// 5-minute rate window
-	win5 := now.Add(-5 * time.Minute).Unix()
-	var rate5 int64
-	_ = db.QueryRow(
-		`SELECT COALESCE(SUM(tokens_used),0) FROM threads WHERE created_at >= ?`,
-		win5,
-	).Scan(&rate5)
-
-	// 5-hour window for tier limit
+	// 5-hour window for tier limit (same caveat: threads created in window)
 	win5h := now.Add(-5 * time.Hour).Unix()
 	var tokens5h int64
 	_ = db.QueryRow(
@@ -60,11 +54,12 @@ func (Provider) Collect(cfg provider.ProviderConfig, since time.Time) (provider.
 		win5h,
 	).Scan(&tokens5h)
 
+	// RatePer5Min is not reported: tokens_used is cumulative so a thread created
+	// seconds ago would contribute its full lifetime total, not recent activity.
 	s := provider.Summary{
 		Name:        "codex",
 		TokensToday: tokensTotal,
 		Sessions:    sessions,
-		RatePer5Min: rate5,
 		LimitPct:    -1,
 	}
 

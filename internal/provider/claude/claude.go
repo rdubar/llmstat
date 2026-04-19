@@ -113,12 +113,24 @@ type jsonlRecord struct {
 	} `json:"message"`
 }
 
+type usageKey struct {
+	tsSec int64
+	in    int64
+	out   int64
+	read  int64
+	write int64
+}
+
 func parseJSONL(path string, since, rateStart time.Time) (tokens, rateTokens int64, cost float64, err error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return 0, 0, 0, err
 	}
 	defer f.Close()
+
+	// Deduplicate repeated assistant events with identical usage payloads
+	// (Claude logs emit the same usage object multiple times within milliseconds).
+	seen := make(map[usageKey]bool)
 
 	dec := json.NewDecoder(f)
 	for dec.More() {
@@ -140,6 +152,11 @@ func parseJSONL(path string, since, rateStart time.Time) (tokens, rateTokens int
 			continue
 		}
 		u := rec.Message.Usage
+		key := usageKey{ts.Unix(), u.InputTokens, u.OutputTokens, u.CacheReadInputTokens, u.CacheCreationInputTokens}
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
 		t := u.InputTokens + u.OutputTokens + u.CacheReadInputTokens + u.CacheCreationInputTokens
 		tokens += t
 		cost += rec.CostUSD

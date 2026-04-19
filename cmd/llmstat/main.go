@@ -96,20 +96,20 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Determine time window
-	now := time.Now().UTC()
+	// Determine time window using local time so "today" matches the user's clock.
+	now := time.Now()
 	var since time.Time
 	var periodLabel string
 	switch {
 	case *monthly:
-		since = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
+		since = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
 		periodLabel = since.Format("January 2006")
 	case *weekly:
 		since = now.AddDate(0, 0, -7)
 		periodLabel = "since " + since.Format("2 Jan")
 	}
 	if periodLabel == "" {
-		since = now.Truncate(24 * time.Hour)
+		since = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 	}
 
 	// Filter to a single provider if positional arg given
