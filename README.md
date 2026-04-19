@@ -21,6 +21,12 @@ Requires Go 1.21+.
 go install github.com/rdubar/llmstat/cmd/llmstat@latest
 ```
 
+Make sure `$GOPATH/bin` is on your PATH (one-time setup if not already done):
+
+```sh
+echo 'export PATH="$PATH:$(go env GOPATH)/bin"' >> ~/.zshrc && source ~/.zshrc
+```
+
 Then run setup to configure your tier (Claude Pro, Max, etc.):
 
 ```sh
