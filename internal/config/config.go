@@ -26,6 +26,12 @@ func DefaultPath() string {
 	return filepath.Join(home, ".config", "llmstat", "config.toml")
 }
 
+// Exists reports whether the config file has been written.
+func Exists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
+}
+
 // Load reads config from path. Missing file returns a zero Config (valid).
 func Load(path string) (Config, error) {
 	var cfg Config

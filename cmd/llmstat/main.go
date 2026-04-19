@@ -46,6 +46,12 @@ func main() {
 		return
 	}
 
+	if !config.Exists(*cfgPath) {
+		fmt.Fprintln(os.Stderr, "No config found. Run `llmstat --setup` to configure your AI tools.")
+		fmt.Fprintln(os.Stderr, "llmstat will still show any tools it can detect automatically.")
+		fmt.Fprintln(os.Stderr)
+	}
+
 	cfg, err := config.Load(*cfgPath)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "config error:", err)

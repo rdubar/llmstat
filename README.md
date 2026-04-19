@@ -15,7 +15,7 @@ Reads local data files directly — no API calls, no accounts, works offline.
 
 ## Install
 
-Requires Go 1.21+.
+Requires [Go 1.21+](https://go.dev/doc/install).
 
 ```sh
 go install github.com/rdubar/llmstat/cmd/llmstat@latest
