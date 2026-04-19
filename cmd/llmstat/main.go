@@ -65,6 +65,7 @@ func main() {
 
 	if doUpgrade {
 		cmd := exec.Command("go", "install", "github.com/rdubar/llmstat/cmd/llmstat@latest")
+		cmd.Env = append(os.Environ(), "GOPROXY=direct", "GONOSUMDB=*")
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		if err := cmd.Run(); err != nil {
