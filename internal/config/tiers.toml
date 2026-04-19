@@ -1,0 +1,33 @@
+version = "1"
+
+[claude.pro]
+last_verified = "2026-04-19"
+window_hours = 5
+tokens_per_window = 88000
+cost_usd_per_day = 3.33
+
+[claude.max]
+last_verified = "2026-04-19"
+window_hours = 5
+tokens_per_window = 220000
+cost_usd_per_day = 16.67
+
+# Codex token limits not yet published by OpenAI (April 2026).
+# Entries record the window size; no tokens_per_window until OpenAI documents it.
+[codex.plus]
+last_verified = "2026-04-19"
+window_hours = 5
+notes = "Token limits not yet published — usage shown without limit bar"
+
+[codex.pro]
+last_verified = "2026-04-19"
+window_hours = 5
+notes = "Token limits not yet published — usage shown without limit bar"
+
+[gemini.free]
+last_verified = "2026-04-19"
+prompts_per_day = 100
+
+[gemini.advanced]
+last_verified = "2026-04-19"
+prompts_per_day = 300
