@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/exec"
 	"time"
 
 	"github.com/rdubar/llmstat/internal/config"
@@ -25,12 +26,15 @@ var allProviders = []provider.Provider{
 
 func main() {
 	var (
-		doSetup  = flag.Bool("setup", false, "Run interactive setup wizard")
-		weekly   = flag.Bool("w", false, "Show this week's usage instead of today")
-		monthly  = flag.Bool("m", false, "Show this month's usage instead of today")
-		jsonOut  = flag.Bool("json", false, "Output JSON")
-		cfgPath  = flag.String("config", config.DefaultPath(), "Config file path")
+		doSetup   = flag.Bool("setup", false, "Run interactive setup wizard")
+		doUpgrade bool
+		weekly    = flag.Bool("w", false, "Show this week's usage instead of today")
+		monthly   = flag.Bool("m", false, "Show this month's usage instead of today")
+		jsonOut   = flag.Bool("json", false, "Output JSON")
+		cfgPath   = flag.String("config", config.DefaultPath(), "Config file path")
 	)
+	flag.BoolVar(&doUpgrade, "upgrade", false, "Upgrade llmstat to the latest version")
+	flag.BoolVar(&doUpgrade, "u", false, "Alias for --upgrade")
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: llmstat [flags] [provider]\n\n")
 		fmt.Fprintf(os.Stderr, "  provider    Optional: show detail for one provider (e.g. llmstat claude)\n\n")
@@ -38,6 +42,18 @@ func main() {
 		flag.PrintDefaults()
 	}
 	flag.Parse()
+
+	if doUpgrade {
+		cmd := exec.Command("go", "install", "github.com/rdubar/llmstat/cmd/llmstat@latest")
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			fmt.Fprintln(os.Stderr, "upgrade failed:", err)
+			os.Exit(1)
+		}
+		fmt.Println("llmstat upgraded to latest.")
+		return
+	}
 
 	if *doSetup {
 		if err := config.RunSetup(*cfgPath); err != nil {

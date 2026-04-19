@@ -41,12 +41,13 @@ llmstat -w         # this week's usage
 llmstat -m         # this month's usage
 llmstat claude     # single provider detail
 llmstat --json     # machine-readable JSON output
+llmstat -u         # upgrade to latest version
 ```
 
 ## Upgrade
 
 ```sh
-go install github.com/rdubar/llmstat/cmd/llmstat@latest
+llmstat --upgrade   # or: llmstat -u
 ```
 
 ## How it works
