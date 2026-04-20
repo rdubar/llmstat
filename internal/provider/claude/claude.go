@@ -36,6 +36,9 @@ func (Provider) Collect(cfg provider.ProviderConfig, since time.Time) (provider.
 	var tokensToday, rateTokens int64
 	var costUSD float64
 
+	// Count sessions started in the window from ~/.claude/sessions/*.json
+	sessions := countSessions(since)
+
 	pattern := filepath.Join(logDir, "**", "*.jsonl")
 	paths, err := filepath.Glob(pattern)
 	if err != nil {
@@ -74,6 +77,7 @@ func (Provider) Collect(cfg provider.ProviderConfig, since time.Time) (provider.
 		TokensToday: tokensToday,
 		CostUSD:     costUSD,
 		RatePer5Min: rateTokens,
+		Sessions:    sessions,
 	}
 
 	// Apply tier limit if configured.
@@ -169,4 +173,35 @@ func parseJSONL(path string, since, rateStart time.Time) (tokens, billable, rate
 		}
 	}
 	return tokens, billable, rateTokens, cost, nil
+}
+
+// countSessions counts Claude Code sessions started since `since`
+// by reading ~/.claude/sessions/*.json files.
+func countSessions(since time.Time) int {
+	home, _ := os.UserHomeDir()
+	dir := filepath.Join(home, ".claude", "sessions")
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return 0
+	}
+	count := 0
+	for _, e := range entries {
+		if e.IsDir() || filepath.Ext(e.Name()) != ".json" {
+			continue
+		}
+		data, err := os.ReadFile(filepath.Join(dir, e.Name()))
+		if err != nil {
+			continue
+		}
+		var s struct {
+			StartedAt int64 `json:"startedAt"` // Unix ms
+		}
+		if err := json.Unmarshal(data, &s); err != nil || s.StartedAt == 0 {
+			continue
+		}
+		if time.UnixMilli(s.StartedAt).After(since) {
+			count++
+		}
+	}
+	return count
 }

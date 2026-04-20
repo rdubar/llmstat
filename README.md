@@ -1,20 +1,43 @@
 # llmstat
 
-Track your local AI tool usage in one line.
+> **Experimental** — this is an early-stage utility. See [what it does and doesn't do](#what-it-does-and-doesnt-do) before relying on any numbers.
+
+A local activity pulse for your AI coding tools.
 
 ```
-claude  ████████░░  78% of 5hr window  │ 42.0M tok  1.9M/5min
-codex   ░░░░░░░░░░                     │ 5.4M tok  3 sessions
-gemini  ░░░░░░░░░░                     │ 7.8k tok  1 sessions
-cursor  ░░░░░░░░░░                     │ enterprise · no local usage data
+claude  ░░░░░░░░░░  │ 4.8M tok  224k/5min  3 sessions
+codex   ░░░░░░░░░░  │ 5.4M tok  3 sessions
+gemini  ░░░░░░░░░░  │ 7.8k tok  1 session
+cursor  ░░░░░░░░░░  │ enterprise · no local usage data
 ```
 
 Reads local data files directly — no API calls, no accounts, works offline.
 
 **Supported tools:** Claude (Anthropic), Codex (OpenAI), Gemini CLI, Cursor
 
-> **Accuracy note:** llmstat is an activity pulse, not a precise billing meter. Token counts
-> are approximate — see [Known limitations](#known-limitations) below.
+---
+
+## What it does and doesn't do
+
+### What it does
+
+- Tells you **roughly how much** you've been using each AI tool today, this week, or this month
+- Shows your current **token burn rate** (tokens in the last 5 minutes) as a proxy for current activity
+- Counts **sessions** started in the period
+- Works **offline**, with no accounts or API keys required
+- Outputs **JSON** for scripting
+
+### What it doesn't do
+
+**It cannot tell you how close you are to your usage limit.** This is the most important thing to understand. Anthropic, OpenAI, and other providers enforce limits server-side and do not expose remaining quota in any local file. There is no reliable way to show a "X% of limit used" bar for Claude Code — we tried, and the numbers were consistently misleading. The progress bar is only shown where a verified limit is known.
+
+**Token counts are approximate**, not billing-accurate. Local logs were not designed for accounting:
+- Claude logs contain duplicate records that must be deduplicated by message ID
+- Codex stores cumulative thread totals, not per-message events
+- Cache reads (which can dwarf actual input/output tokens) are excluded from counts since they don't appear to count against limits the same way
+- Counts are per-device — if you use the same tool on multiple machines, each machine only sees its own activity
+
+**If you need accurate cross-machine usage data**, see [OpenUsage](#see-also), which takes a daemon + API approach instead.
 
 ---
 
@@ -32,7 +55,7 @@ Make sure `$GOPATH/bin` is on your PATH (one-time setup if not already done):
 echo 'export PATH="$PATH:$(go env GOPATH)/bin"' >> ~/.zshrc && source ~/.zshrc
 ```
 
-Then run setup to configure your tier (Claude Pro, Max, etc.):
+Then run setup to configure your tier:
 
 ```sh
 llmstat --setup
@@ -61,69 +84,12 @@ llmstat --upgrade   # or: llmstat -u
 
 | Tool   | Data source |
 |--------|-------------|
-| Claude | `~/.claude/projects/**/*.jsonl` |
+| Claude | `~/.claude/projects/**/*.jsonl` (tokens), `~/.claude/sessions/` (session count) |
 | Codex  | `~/.codex/state_5.sqlite` |
 | Gemini | `~/.gemini/tmp/*/chats/session-*.json` — token counts per response |
-| Cursor | `~/Library/Application Support/Cursor/User/globalStorage/state.vscdb` — tier only (usage is cloud-side) |
+| Cursor | `~/Library/Application Support/Cursor/User/globalStorage/state.vscdb` — tier only |
 
-Each provider is auto-detected. If the data file exists, it appears in output.
-
-Tier limits (tokens per 5-hour window) are read from a bundled `tiers.toml` and calibrated periodically against published limits. Run `llmstat --setup` to set your tier. The bar turns yellow at 60% and red at 85%.
-
-## Known limitations
-
-llmstat reads whatever local telemetry each tool happens to write. That data wasn't designed for accounting, so there are real accuracy gaps:
-
-**Claude** — The JSONL logs emit multiple records per API call (one per content block —
-e.g. a thinking block followed by the text response), each carrying the full usage payload.
-llmstat deduplicates by `message.id` so each API call is counted once. `costUSD` fields
-are zero in local logs, so the daily budget feature shows no spend even when tokens are high.
-
-The **limit bar is not shown** for Claude tiers: Anthropic publishes no exact token limits
-for Claude Code CLI, and community estimates (derived from the claude.ai web interface) are
-empirically too low — heavy Claude Code users don't hit rate limits at those figures.
-The bar will return once reliable Claude Code-specific limits are established.
-
-**Codex** — `~/.codex/state_5.sqlite` stores a cumulative `tokens_used` total per thread,
-not per-message events. llmstat can only count threads that were *created* within the
-requested window — threads started before the window but still active are excluded.
-The 5-minute rate shown by some other tools is not reported here because it would just
-be the full lifetime token count of any recently-created thread, which is meaningless as
-a rate.
-
-**Gemini** — Token counts are per model response and are filtered by message timestamp,
-so they should be reasonably accurate for the selected window. The main caveat is that
-session files with no `timestamp` fields on messages are excluded from period filtering
-and may contribute zero or all tokens depending on file modification time.
-
-**Cursor** — No local usage data is available. llmstat can only detect your subscription
-tier from the local state database. Actual token usage is cloud-side only.
-
-**General** — "Today" is computed in your local timezone. Weekly (`-w`) and monthly (`-m`)
-windows are also local-time anchored.
-
-**Multi-machine** — llmstat reads local files only. If you use the same tool on multiple
-machines, each machine reports its own usage independently. There is no cross-machine
-aggregation; totals are per-device, not per-account.
-
-## Future directions
-
-The multi-machine gap is the most significant limitation of the local-file approach. The
-natural fix is pulling usage directly from provider APIs, which would give accurate
-per-account totals regardless of how many machines you use. Here's what's feasible:
-
-| Provider | API availability | Notes |
-|----------|-----------------|-------|
-| **OpenAI (Codex)** | Yes — [`GET /v1/usage`](https://platform.openai.com/docs/api-reference) | Daily token counts by model; requires an API key with usage read scope |
-| **Anthropic (Claude)** | Not yet public | Usage visible in the console but no programmatic endpoint currently documented |
-| **Gemini** | Partial — Vertex AI billing API exists | Only for enterprise/Vertex users; Gemini CLI free tier has no usage API |
-| **Cursor** | No | Usage is cloud-side with no public API |
-
-OpenAI is the most actionable near-term addition. A future `[claude] api_key = "..."` config
-option could enable API-backed counts alongside (or instead of) local log parsing, with
-local files as the offline fallback.
-
-Contributions to add API-backed providers are welcome — see [Contributing](#contributing).
+Each provider is auto-detected. If the data file/directory exists, it appears in output.
 
 ## Config
 
@@ -131,19 +97,62 @@ Config lives at `~/.config/llmstat/config.toml`. Running `--setup` creates it in
 
 ```toml
 [claude]
-tier = "max"
+tier = "pro"   # pro | max5x | max20x
 
 [codex]
 tier = "plus"
 ```
 
+## Known data quality issues
+
+**Claude — duplicate log records**
+The JSONL logs emit multiple records per API call (one per content block — thinking block,
+then text response), each carrying the full usage payload. llmstat deduplicates by
+`message.id`. Without this, totals are roughly 2× inflated.
+
+**Claude — no limit bar**
+Anthropic publishes no token limits for Claude Code CLI. Community estimates derived from
+the claude.ai web interface are empirically wrong for Claude Code — heavy users don't hit
+limits at those figures. The bar is omitted rather than showing a misleading number.
+
+**Claude — cache reads excluded from counts**
+`cache_read_input_tokens` can be 20–30× larger than actual input+output tokens (large
+contexts are re-read on every request). These are excluded from displayed totals since
+they don't appear to count against rolling limits the same way.
+
+**Codex — cumulative token totals**
+`~/.codex/state_5.sqlite` stores a running `tokens_used` per thread, not per-message
+events. Only threads *created* within the window are counted — threads started before
+the window but still active are missed.
+
+**Gemini — session file filtering**
+Token counts are filtered by per-message timestamp, which is accurate. Files with no
+timestamps fall back to file modification time.
+
+**Cursor — no usage data**
+Subscription tier is detected locally; actual usage is cloud-side only.
+
+**All providers — per-device only**
+Counts reflect this machine only. No cross-machine aggregation.
+
+## Future directions
+
+The most meaningful improvement would be provider API integration for cross-machine
+totals and verified limit data:
+
+| Provider | API availability | Notes |
+|----------|-----------------|-------|
+| **OpenAI (Codex)** | Yes — `GET /v1/usage` | Daily token counts by model; requires API key |
+| **Anthropic (Claude)** | Not yet public | No programmatic usage endpoint for subscriptions |
+| **Gemini** | Partial — Vertex AI only | Free tier has no usage API |
+| **Cursor** | No | No public API |
+
 ## See also
 
-[OpenUsage](https://github.com/janekbaraniewski/openusage) — a complementary tool that runs
-a local telemetry daemon and pulls usage data directly from provider APIs (17+ providers).
-Because it pre-computes results in the background it responds instantly, and because it
-queries APIs rather than local files it aggregates across machines. Worth a look if you
-need cross-machine totals or faster refresh times.
+[OpenUsage](https://github.com/janekbaraniewski/openusage) — runs a local daemon and pulls
+usage from provider APIs (17+ providers). Responds instantly (pre-computed), aggregates
+across machines, and shows rolling window data. A better choice if you need accuracy over
+simplicity.
 
 ## Contributing
 
