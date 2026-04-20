@@ -7,13 +7,15 @@
 A single-command activity summary for your local AI coding tools.
 
 ```
-claude  ░░░░░░░░░░  │ 4.8M tok  224k/5min  3 sessions
-codex   ░░░░░░░░░░  │ 5.4M tok  3 sessions
-gemini  ░░░░░░░░░░  │ 7.8k tok  1 session
-cursor  ░░░░░░░░░░  │ enterprise · no local usage data
+claude  ░░░░░░░░░░                               │ 13.7M tok  1.6M/5min  2 sessions
+codex   ██░░░░░░░░  0% of 5h window [ou] ↺ 00:37 │ 3 sessions
+gemini  ░░░░░░░░░░                               │ 7.8k tok  1 session
+cursor  ░░░░░░░░░░                               │ enterprise · no local usage data
 ```
 
 Reads local data files directly — no API calls, no accounts, works offline.
+
+If [OpenUsage](https://github.com/janekbaraniewski/openusage) is installed and running, llmstat uses its daemon as a backend for real server-side rate limit data (marked `[ou]`), while still reading local files for token counts and session data.
 
 **Supported tools:** Claude (Anthropic), Codex (OpenAI), Gemini CLI, Cursor
 
@@ -28,10 +30,11 @@ Reads local data files directly — no API calls, no accounts, works offline.
 - Counts **sessions** started in the period
 - Works **offline**, with no accounts or API keys required
 - Outputs **JSON** for scripting
+- **Enriches with real rate limits** if [OpenUsage](https://github.com/janekbaraniewski/openusage) is running — server-confirmed percentages and reset times, marked `[ou]`
 
 ### What it doesn't do
 
-**It cannot tell you how close you are to your usage limit.** This is the most important thing to understand. Anthropic, OpenAI, and other providers enforce limits server-side and do not expose remaining quota in any local file. There is no reliable way to show a "X% of limit used" bar for Claude Code — we tried, and the numbers were consistently misleading. The progress bar is only shown where a verified limit is known.
+**It cannot tell you how close you are to your usage limit** — unless OpenUsage is running. Provider limits are enforced server-side and not exposed in local files. Without OpenUsage, the progress bar is only shown where a verified limit is known (e.g. a configured daily budget). With OpenUsage, providers that expose rate-limit headers (currently Codex) show real percentages.
 
 **Token counts are approximate**, not billing-accurate. Local logs were not designed for accounting:
 - Claude logs contain duplicate records that must be deduplicated by message ID
@@ -93,6 +96,8 @@ llmstat --upgrade   # or: llmstat -u
 
 Each provider is auto-detected. If the data file/directory exists, it appears in output.
 
+If the [OpenUsage](https://github.com/janekbaraniewski/openusage) daemon is running at `~/.local/state/openusage/telemetry.sock`, llmstat queries it for server-side rate limit data and uses it to fill in the progress bar where available. This is optional — llmstat works fully without it.
+
 ## Config
 
 Config lives at `~/.config/llmstat/config.toml`. Running `--setup` creates it interactively. You can also edit it directly:
@@ -137,24 +142,12 @@ Subscription tier is detected locally; actual usage is cloud-side only.
 **All providers — per-device only**
 Counts reflect this machine only. No cross-machine aggregation.
 
-## Future directions
-
-The most meaningful improvement would be provider API integration for cross-machine
-totals and verified limit data:
-
-| Provider | API availability | Notes |
-|----------|-----------------|-------|
-| **OpenAI (Codex)** | Yes — `GET /v1/usage` | Daily token counts by model; requires API key |
-| **Anthropic (Claude)** | Not yet public | No programmatic usage endpoint for subscriptions |
-| **Gemini** | Partial — Vertex AI only | Free tier has no usage API |
-| **Cursor** | No | No public API |
-
 ## See also
 
 [OpenUsage](https://github.com/janekbaraniewski/openusage) — runs a local daemon and pulls
 usage from provider APIs (17+ providers). Responds instantly (pre-computed), aggregates
 across machines, and shows rolling window data. A better choice if you need accuracy over
-simplicity.
+simplicity. llmstat can use it as a backend when it's running.
 
 ## Contributing
 
