@@ -12,6 +12,7 @@ import (
 
 	"github.com/rdubar/llmstat/internal/config"
 	"github.com/rdubar/llmstat/internal/display"
+	"github.com/rdubar/llmstat/internal/openusage"
 	"github.com/rdubar/llmstat/internal/provider"
 	"github.com/rdubar/llmstat/internal/provider/claude"
 	"github.com/rdubar/llmstat/internal/provider/codex"
@@ -144,6 +145,9 @@ func main() {
 		}(i, p)
 	}
 	wg.Wait()
+
+	// Enrich with real server-side rate limits from OpenUsage daemon (if running).
+	openusage.Enrich(results)
 
 	var summaries []provider.Summary
 	for _, s := range results {
