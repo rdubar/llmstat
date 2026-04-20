@@ -79,6 +79,11 @@ e.g. a thinking block followed by the text response), each carrying the full usa
 llmstat deduplicates by `message.id` so each API call is counted once. `costUSD` fields
 are zero in local logs, so the daily budget feature shows no spend even when tokens are high.
 
+The **limit bar is not shown** for Claude tiers: Anthropic publishes no exact token limits
+for Claude Code CLI, and community estimates (derived from the claude.ai web interface) are
+empirically too low — heavy Claude Code users don't hit rate limits at those figures.
+The bar will return once reliable Claude Code-specific limits are established.
+
 **Codex** — `~/.codex/state_5.sqlite` stores a cumulative `tokens_used` total per thread,
 not per-message events. llmstat can only count threads that were *created* within the
 requested window — threads started before the window but still active are excluded.

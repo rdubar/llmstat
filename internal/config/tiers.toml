@@ -7,22 +7,26 @@ version = "1"
 # Off-peak hours (6pm–5am PT weekdays, all day weekends) grant higher limits.
 # A separate weekly cap also applies — not tracked here.
 
+# Anthropic does not publish exact token limits for Claude Code CLI.
+# Community estimates (44k/88k/220k per 5h) appear to be for the claude.ai
+# web interface and are too low for Claude Code — empirically, heavy Claude Code
+# Pro users don't hit rate limits at those figures. Removing tokens_per_window
+# until reliable Claude Code-specific values are known; the limit bar will not
+# be shown rather than show a misleading percentage.
+
 [claude.pro]
 last_verified = "2026-04-20"
 window_hours = 5
-tokens_per_window = 44000
 cost_usd_per_day = 3.33
 
 [claude.max5x]
 last_verified = "2026-04-20"
 window_hours = 5
-tokens_per_window = 88000
 cost_usd_per_day = 16.67
 
 [claude.max20x]
 last_verified = "2026-04-20"
 window_hours = 5
-tokens_per_window = 220000
 cost_usd_per_day = 83.33
 
 # Codex token limits not yet published by OpenAI (April 2026).
