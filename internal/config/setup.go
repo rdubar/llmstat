@@ -18,7 +18,7 @@ var providers = []providerSetup{
 	{
 		key:     "claude",
 		label:   "Claude Code",
-		choices: []string{"free", "pro", "max"},
+		choices: []string{"free", "pro", "max5x", "max20x"},
 		detectFn: func() bool {
 			home, _ := os.UserHomeDir()
 			_, err := os.Stat(home + "/.claude/projects")

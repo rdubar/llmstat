@@ -59,11 +59,12 @@ func (Provider) Collect(cfg provider.ProviderConfig, since time.Time) (provider.
 	})
 
 	for _, path := range paths {
-		tokens, rate, cost, walkErr := parseJSONL(path, since, rateStart)
+		tokens, billable, rate, cost, walkErr := parseJSONL(path, since, rateStart)
 		if walkErr != nil {
 			continue // skip unreadable files
 		}
 		tokensToday += tokens
+		_ = billable
 		rateTokens += rate
 		costUSD += cost
 	}
@@ -75,16 +76,17 @@ func (Provider) Collect(cfg provider.ProviderConfig, since time.Time) (provider.
 		RatePer5Min: rateTokens,
 	}
 
-	// Apply tier limit if configured
+	// Apply tier limit if configured.
+	// Uses billable tokens only (input + output + cache_creation), excluding
+	// cache_read tokens which do not appear to count against rolling limits.
 	if cfg.Tier != "" {
 		entry, ok := config.LookupTier("claude", cfg.Tier)
 		if ok && entry.TokensPerWindow > 0 {
-			// Use the 5-hour rolling window as the limit metric
 			windowStart := now.Add(-time.Duration(entry.WindowHours) * time.Hour)
 			var windowTokens int64
 			for _, path := range paths {
-				tokens, _, _, _ := parseJSONL(path, windowStart, windowStart)
-				windowTokens += tokens
+				_, billable, _, _, _ := parseJSONL(path, windowStart, windowStart)
+				windowTokens += billable
 			}
 			sum.LimitPct = float64(windowTokens) / float64(entry.TokensPerWindow)
 			sum.LimitSource = "tier"
@@ -119,10 +121,10 @@ type jsonlRecord struct {
 	} `json:"message"`
 }
 
-func parseJSONL(path string, since, rateStart time.Time) (tokens, rateTokens int64, cost float64, err error) {
+func parseJSONL(path string, since, rateStart time.Time) (tokens, billable, rateTokens int64, cost float64, err error) {
 	f, err := os.Open(path)
 	if err != nil {
-		return 0, 0, 0, err
+		return 0, 0, 0, 0, err
 	}
 	defer f.Close()
 
@@ -158,11 +160,13 @@ func parseJSONL(path string, since, rateStart time.Time) (tokens, rateTokens int
 		}
 		u := rec.Message.Usage
 		t := u.InputTokens + u.OutputTokens + u.CacheReadInputTokens + u.CacheCreationInputTokens
+		b := u.InputTokens + u.OutputTokens + u.CacheCreationInputTokens
 		tokens += t
+		billable += b
 		cost += rec.CostUSD
 		if !ts.Before(rateStart) {
 			rateTokens += t
 		}
 	}
-	return tokens, rateTokens, cost, nil
+	return tokens, billable, rateTokens, cost, nil
 }
