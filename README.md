@@ -1,8 +1,10 @@
 # llmstat
 
-> **Experimental** — this is an early-stage utility. See [what it does and doesn't do](#what-it-does-and-doesnt-do) before relying on any numbers.
+> **Experimental & lightweight** — a minimal, offline utility for a quick activity glance. Not a billing meter or quota tracker. See [what it does and doesn't do](#what-it-does-and-doesnt-do).
+>
+> If you need accurate cross-machine usage or real-time limit tracking, use [OpenUsage](https://github.com/janekbaraniewski/openusage) instead.
 
-A local activity pulse for your AI coding tools.
+A single-command activity summary for your local AI coding tools.
 
 ```
 claude  ░░░░░░░░░░  │ 4.8M tok  224k/5min  3 sessions
