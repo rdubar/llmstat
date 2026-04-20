@@ -111,7 +111,7 @@ func pctStr(s provider.Summary) string {
 	}
 	pct := int(math.Round(s.LimitPct * 100))
 	if pct > 100 {
-		return fmt.Sprintf(">100%% of %s", label)
+		return fmt.Sprintf("%d%% of %s", pct, label)
 	}
 	return fmt.Sprintf("%d%% of %s", pct, label)
 }

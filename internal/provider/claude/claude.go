@@ -47,9 +47,14 @@ func (Provider) Collect(cfg provider.ProviderConfig, since time.Time) (provider.
 		if err != nil || d.IsDir() {
 			return nil
 		}
-		if filepath.Ext(path) == ".jsonl" {
-			paths = append(paths, path)
+		if filepath.Ext(path) != ".jsonl" {
+			return nil
 		}
+		// Skip files not modified in the window — they can't contain new records.
+		if info, ierr := d.Info(); ierr == nil && info.ModTime().Before(since) {
+			return nil
+		}
+		paths = append(paths, path)
 		return nil
 	})
 

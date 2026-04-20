@@ -132,6 +132,14 @@ tier = "max"
 tier = "plus"
 ```
 
+## See also
+
+[OpenUsage](https://github.com/janekbaraniewski/openusage) — a complementary tool that runs
+a local telemetry daemon and pulls usage data directly from provider APIs (17+ providers).
+Because it pre-computes results in the background it responds instantly, and because it
+queries APIs rather than local files it aggregates across machines. Worth a look if you
+need cross-machine totals or faster refresh times.
+
 ## Contributing
 
 Contributions welcome — bug reports, tier data corrections, and new provider implementations especially. Please open an issue before starting significant work so we can align on approach.

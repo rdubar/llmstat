@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime/debug"
+	"sync"
 	"time"
 
 	"github.com/rdubar/llmstat/internal/config"
@@ -124,18 +125,31 @@ func main() {
 		}
 	}
 
-	// Run providers
-	var summaries []provider.Summary
-	for _, p := range allProviders {
+	// Run providers in parallel, preserving display order.
+	results := make([]provider.Summary, len(allProviders))
+	var wg sync.WaitGroup
+	for i, p := range allProviders {
 		if target != "" && p.Name() != target {
 			continue
 		}
 		if !p.Detect() {
 			continue
 		}
-		pcfg := providerCfg(cfg, p.Name())
-		s, _ := p.Collect(pcfg, since)
-		summaries = append(summaries, s)
+		wg.Add(1)
+		go func(i int, p provider.Provider) {
+			defer wg.Done()
+			pcfg := providerCfg(cfg, p.Name())
+			s, _ := p.Collect(pcfg, since)
+			results[i] = s
+		}(i, p)
+	}
+	wg.Wait()
+
+	var summaries []provider.Summary
+	for _, s := range results {
+		if s.Name != "" {
+			summaries = append(summaries, s)
+		}
 	}
 
 	if len(summaries) == 0 {
